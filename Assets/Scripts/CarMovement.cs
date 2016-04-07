@@ -7,13 +7,14 @@ public class CarMovement : MonoBehaviour {
     public float movementSpeed = 20.0f;
     public Rigidbody rb;
     public Slider acceleration;
-    public Camera mainCamera;
+
+    //Wheels
+    public WheelCollider frontLeft;
+    public WheelCollider frontRight;
+    public WheelCollider backLeft;
+    public WheelCollider backRight;
 
     private float carAcceleration = 0f;
-    //private float surfaceAsphalt = 0.9f;
-    //private float surfaceGrass = 0.3f;
-    //private GameObject asphalt;
-    //private GameObject grass;
 
     // Use this for initialization
     void Start ()
@@ -25,13 +26,17 @@ public class CarMovement : MonoBehaviour {
 	void Update ()
     {
         Movement();
-        rb.AddForce(Vector3.left * movementSpeed * Time.deltaTime);
-        Debug.Log(movementSpeed);
     }
 
     void Movement ()
     {
+        //Car acceleration == slider position, mvement speed increaments by carAcceleration
         carAcceleration = acceleration.value;
         movementSpeed += carAcceleration;
+
+        //Apply force to rear wheels to simulate rear wheel drive
+        backLeft.motorTorque = movementSpeed;
+        backRight.motorTorque = movementSpeed;
+        Debug.Log(movementSpeed);
     }
 }

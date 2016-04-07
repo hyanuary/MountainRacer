@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class CarMovement : MonoBehaviour {
 
@@ -25,9 +26,11 @@ public class CarMovement : MonoBehaviour {
     {
         Movement();
 
-        if (acceleration.value <= 0 && movementSpeed > 0)
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            movementSpeed -= declerationRate;
+            SceneManager.LoadScene("GameLevel");
+            acceleration.value = 0;
+            movementSpeed = 0;
         }
     }
 
@@ -38,5 +41,10 @@ public class CarMovement : MonoBehaviour {
         //Apply force to rear wheels to simulate rear wheel drive
         backLeft.motorTorque = Mathf.Clamp(movementSpeed, 0.0f, 500.0f) * Time.deltaTime;
         backRight.motorTorque = Mathf.Clamp(movementSpeed, 0.0f, 500.0f) * Time.deltaTime;
+
+        if (acceleration.value <= 0 && movementSpeed > 0)
+        {
+            movementSpeed -= declerationRate;
+        }
     }
 }

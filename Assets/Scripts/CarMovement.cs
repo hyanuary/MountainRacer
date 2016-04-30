@@ -6,31 +6,57 @@ using UnityEngine.SceneManagement;
 public class CarMovement : MonoBehaviour {
 
     public float movementSpeed = 20.0f;
-    public float declerationRate = 10.0f;
     public Slider acceleration;
+	public Rigidbody rigbod;
+    private float declerationRate;
+
     UIManager ui;
 
-
-
-    //Wheels
+    //Wheel Colliders
     public WheelCollider frontLeft;
     public WheelCollider frontRight;
     public WheelCollider backLeft;
     public WheelCollider backRight;
 
-    // wheel detction 
-    public WheelHit wheelL;
-    public WheelHit wheelR;
+    //Wheel friction variables (used to adjust stiffness)
+    private WheelFrictionCurve backLeftWheelFriction;
+    private WheelFrictionCurve backRightWheelFriction;
+    private WheelFrictionCurve frontLeftWheelFriction;
+    private WheelFrictionCurve frontRightWheelFriction;
+
+    //Terrain stiffness
+    public float grassStiffness = 0.2f;
+    public float dirtStiffness = 0.3f;
+    public float gravelStiffness = 0.4f;
+    public float asphaltStiffness = 0.5f;
+
+    //Wheel game objects
+    public Transform frontLeftWheelMesh;
+	public Transform backLeftWheelMesh;
+
+    //Wheel detction 
+    private WheelHit wheelL;
+    private WheelHit wheelR;
 
     // Use this for initialization
     void Start ()
     {
+        //Set center of mass slightly below the car
+		rigbod.centerOfMass = new Vector3 (0, -1, 0);
+
+        //Set each wheel friction curve to the corrosponding wheel
+        backLeftWheelFriction = backLeft.forwardFriction;
+        backRightWheelFriction = backRight.forwardFriction;
+        frontLeftWheelFriction = frontLeft.forwardFriction;
+        frontRightWheelFriction = frontRight.forwardFriction;
+
         ui = GameObject.FindGameObjectWithTag("UIManager").GetComponent<UIManager>();
-	}
+    }
 
     // Update is called once per frame
     void Update()
     {
+        //Temporary restart button
         if (Input.GetKeyDown(KeyCode.R))
         {
             SceneManager.LoadScene("GameLevel");
@@ -38,7 +64,9 @@ public class CarMovement : MonoBehaviour {
             movementSpeed = 0;
         }
 
-        
+        //Wheel rotation
+		frontLeftWheelMesh.Rotate(frontLeft.rpm / 60 * 360 * Time.deltaTime, 0, 0);
+		backLeftWheelMesh.Rotate(backLeft.rpm / 60 * 360 * Time.deltaTime, 0, 0);
     }
 
     void FixedUpdate ()
@@ -50,132 +78,76 @@ public class CarMovement : MonoBehaviour {
         backRight.GetGroundHit(out wheelR);
 
         // end line detection
-        if(wheelL.collider.gameObject.tag == "Finish")
+        if (wheelL.collider.gameObject.tag == "Finish")
         {
-            movementSpeed = 0.0f;
-            acceleration.value = 0.0f;
+            //movementSpeed = 0.0f;
+            //acceleration.value = 0.0f;
             ui.timerCheck = false;
         }
 
         //check point 
-        if(wheelL.collider.gameObject.tag == "Check")
+        if (wheelL.collider.gameObject.tag == "Check")
         {
             ui.checkPointCheck = true;
         }
 
-        // grass terrain
-        if (wheelL.collider.gameObject.tag == "Grass" && acceleration.value > 3.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backLeft.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backLeft.forwardFriction = fwdF;
+        if (backLeft.isGrounded && backRight.isGrounded) 
+		{
+			//Grass terrain
+			if (wheelL.collider.gameObject.tag == "Grass" && acceleration.value >= 2) 
+			{
+                backLeftWheelFriction.stiffness = grassStiffness;
+                backRightWheelFriction.stiffness = grassStiffness;
+                frontLeftWheelFriction.stiffness = grassStiffness;
+                frontRightWheelFriction.stiffness = grassStiffness;
+            }
 
-           
-        }
-       if (wheelR.collider.gameObject.tag == "Grass" && acceleration.value > 3.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backRight.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backRight.forwardFriction = fwdF;
-        }
+			//Dirt terrain
+			if (wheelL.collider.gameObject.tag == "Dirt" && acceleration.value >= 4) 
+			{
+                backLeftWheelFriction.stiffness = dirtStiffness;
+                backRightWheelFriction.stiffness = dirtStiffness;
+                frontLeftWheelFriction.stiffness = dirtStiffness;
+                frontRightWheelFriction.stiffness = dirtStiffness;
+            }
 
-        //asphalt terrain
-        if (wheelL.collider.gameObject.tag == "Asphalt" && acceleration.value > 4.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backLeft.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backLeft.forwardFriction = fwdF;
+			//Gravel terrain
+			if (wheelL.collider.gameObject.tag == "Gravel" && acceleration.value >= 6) 
+			{
+                backLeftWheelFriction.stiffness = gravelStiffness;
+                backRightWheelFriction.stiffness = gravelStiffness;
+                frontLeftWheelFriction.stiffness = gravelStiffness;
+                frontRightWheelFriction.stiffness = gravelStiffness;
+            }
 
+            //Asphalt terrain
+            if (wheelL.collider.gameObject.tag == "Asphalt" && acceleration.value >= 8)
+            {
+                backLeftWheelFriction.stiffness = asphaltStiffness;
+                backRightWheelFriction.stiffness = asphaltStiffness;
+                frontLeftWheelFriction.stiffness = asphaltStiffness;
+                frontRightWheelFriction.stiffness = asphaltStiffness;
+            }
 
-        }
-        if (wheelR.collider.gameObject.tag == "Asphalt" && acceleration.value > 4.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backRight.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backRight.forwardFriction = fwdF;
-        }
-
-        //dirt terrain
-        if (wheelL.collider.gameObject.tag == "Dirt" && acceleration.value > 2.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backLeft.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backLeft.forwardFriction = fwdF;
-
-
-        }
-        if (wheelR.collider.gameObject.tag == "Dirt" && acceleration.value > 2.0f)
-        {
-            WheelFrictionCurve fwdF;
-            fwdF = backRight.forwardFriction;
-            fwdF.extremumSlip = 0.9f;
-            fwdF.extremumValue = 10.0f;
-            fwdF.asymptoteSlip = 1.8f;
-            fwdF.asymptoteValue = 20.0f;
-            backRight.forwardFriction = fwdF;
+            frontRight.forwardFriction = backRightWheelFriction;
+            frontLeft.forwardFriction = backLeftWheelFriction;
+            backLeft.forwardFriction = backLeftWheelFriction;
+            backRight.forwardFriction = backRightWheelFriction;
         }
     }
 
     void Movement ()
     {
         movementSpeed += acceleration.value;
+        declerationRate = movementSpeed / 10;
 
         //Apply force to rear wheels to simulate rear wheel drive
-        backLeft.motorTorque = Mathf.Clamp(movementSpeed, 0.0f, 500.0f) * Time.deltaTime;
-        backRight.motorTorque = Mathf.Clamp(movementSpeed, 0.0f, 500.0f) * Time.deltaTime;
+        backLeft.motorTorque = movementSpeed * Time.deltaTime;
+        backRight.motorTorque =movementSpeed * Time.deltaTime;
 
         if (acceleration.value <= 0 && movementSpeed > 0)
         {
             movementSpeed -= declerationRate;
         }
     }
-
-  /* void OnCollisionEnter (Collision terrain)
-    {
-        if (terrain.gameObject.tag == "Grass")
-        {
-            acceleration.value = 0;
-            movementSpeed = 0;
-        }
-    }
-
-    void OnCollisionStay (Collision terrain)
-    {
-        if (terrain.gameObject.tag == "Grass")
-        {
-            acceleration.maxValue = 0;
-            movementSpeed = 0;
-            terrain.transform.GetComponent<Terrain>().decreasingSpeed(movementSpeed);
-        }
-    }*/
-
-    /*void GetGroundHit (WheelHit hit)
-    {
-        if(hit.collider.tag == "Grass")
-        {
-            acceleration.value = 0.0f;
-            movementSpeed = 0.0f;
-            Debug.Log("Hit");
-        }
-    }*/
 }
